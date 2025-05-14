@@ -1,10 +1,11 @@
 import { connectDb } from "@/lib/db";
 import { cookies } from "next/headers";
 import { UserModel } from "@/models/user.model";
-import jwt from "jsonwebtoken";
+import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import { config } from "@/lib/config-env";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import crypto from "node:crypto"
 
 export async function PUT(request) {
     await connectDb();
@@ -57,13 +58,13 @@ export async function PUT(request) {
                 } else {
                     const verifyToken = crypto.randomBytes(16).toString('hex');
                     const verifyTokenExpiry = new Date(Date.now() + 8 * 60 * 60 * 1000);
-    
+
                     user.verifyToken = verifyToken;
                     user.verifyTokenExpiry = verifyTokenExpiry;
-    
+
                     await user.save();
-    
-                    await sendVerificationEmail(user.email, user.username, user.verifyToken);
+
+                    await sendVerificationEmail(user.email, user.username, verifyToken);
                 }
 
                 if (!emailResponse.success) {
@@ -79,9 +80,15 @@ export async function PUT(request) {
                 }
             }
         } catch (error) {
-            return NextResponse.json({
-                message: 'Invalid or expired token!'
-            }, { status: 400 })
+            if (error instanceof JsonWebTokenError) {
+                return NextResponse.json({
+                    message: 'Invalid or expired token!'
+                }, { status: 400 })
+            } else {
+                return NextResponse.json({
+                    message: 'Some error occurred!'
+                }, { status: 400 })
+            }
         }
     }
 

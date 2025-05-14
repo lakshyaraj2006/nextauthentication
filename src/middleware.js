@@ -2,12 +2,15 @@ import { NextResponse } from "next/server"
 
 export default function middleware(request) {
   const authToken = request.cookies.get('authtoken');
-  const publicRoutes = ['/signup', '/signin', '/verify', '/reset-password/:path*'];
+  const publicRoutes = ['/signup', '/signin'];
   const protectedRoutes = ['/profile'];
 
-  if (!authToken && protectedRoutes.includes(request.nextUrl.pathname)) {
+  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname) || request.nextUrl.pathname.startsWith('/reset-password');
+  const isProtectedRoute = protectedRoutes.includes(request.nextUrl.pathname);
+
+  if (!authToken && isProtectedRoute) {
     return NextResponse.redirect(process.env.NEXT_PUBLIC_HOST + '/signin');
-  } else if (authToken && publicRoutes.includes(request.nextUrl.pathname)) {
+  } else if (authToken && isPublicRoute) {
     return NextResponse.redirect(process.env.NEXT_PUBLIC_HOST + '/profile');
   } else {
     return NextResponse.next();
